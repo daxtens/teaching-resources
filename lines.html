@@ -1,0 +1,188 @@
+<!DOCTYPE HTML>
+<html> <head>
+<title></title>
+<style>
+table {
+border-collapse: collapse;
+}
+table tr td {
+border: 1px solid black;
+}
+div.val {
+display: inline-block;
+min-width: 1.5em;
+}
+</style>
+</head>
+<body>
+<h3>Lines</h3>
+
+<table>
+<tr>
+  <td>ax + by + c = 0 <span style="color:red">(red)</span></td>
+  <td>Line 2: dx + ey + f = 0 <span style="color:blue">(blue)</span></td>
+</tr>
+<tr>
+  <td>
+    <label for="a">a</label>
+    <input type="range" id="a" min="-10" max="10" value="1">
+    <div id="aval" class="val"></div>
+  </td>
+  <td>
+    <label for="d">d</label>
+    <input type="range" id="d" min="-10" max="10" value="1">
+    <div class="val"  id="dval"></div>
+  </td>
+  <td>
+    <span><sup>a</sup>/<sub>d</sub>=</span><div class="val"  id="aoverd"></div>
+   </td>
+</tr>
+<tr>
+  <td>
+    <label for="b">b</label>
+    <input type="range" id="b" min="-10" max="10" value="1">
+    <div class="val"  id="bval"></div>
+  </td>
+  <td>
+    <label for="e">e</label>
+    <input type="range" id="e" min="-10" max="10" value="1">
+    <div class="val"  id="eval"></div>
+  </td>
+  <td>
+    <span><sup>b</sup>/<sub>e</sub>=</span><div class="val"  id="bovere"></div>
+  </td>
+</tr>
+<tr>
+  <td>
+    <label for="c">c</label>
+    <input type="range" id="c" min="-10" max="10" value="1">
+    <div class="val"  id="cval"></div>
+  </td>
+  <td>
+    <label for="f">f</label>
+    <input type="range" id="f" min="-10" max="10" value="1">
+    <div class="val"  id="fval"></div>
+  </td>
+  <td>
+    <span><sup>c</sup>/<sub>f</sub> = </span><div class="val"  id="coverf"></div>
+  </td>
+</tr>
+</table>
+<canvas id="lines" width="500px" height="500px"></canvas>
+
+<script>
+
+var minX = -10, maxX = 10, minY=-10, maxY=10, width=500, height=500;
+var c = document.getElementById("lines");
+var ctx = c.getContext("2d");
+handles = ['a','b','c','d','e','f']
+
+
+function pointify(ctx, fname) {
+    return function(pt) {
+        point = translate(pt)
+        ctx[fname](point[0], point[1])
+    }
+}
+
+function translate(point) {
+    return [(point[0]-minX)*(width/(maxX-minX)),
+            height-(point[1]-minY)*(height/(maxY-minY))]
+}
+
+function draw() {
+
+    moveTo = pointify(ctx, 'moveTo')
+    lineTo = pointify(ctx, 'lineTo')
+
+    // blank
+    ctx.clearRect(0,0,width,height)
+    ctx.setStrokeColor('black')
+    ctx.beginPath();
+
+    // axes
+    moveTo([minX,0])
+    lineTo([maxX,0])
+    moveTo([0,minY])
+    lineTo([0,maxY])
+
+    ctx.font = "10pt sans-serif"
+    for (i=minX; i<=maxX; i++) {
+        moveTo([i, -0.075])
+        lineTo([i, +0.075])
+        if (i==0) {
+            continue;
+        }
+        point = translate([i, 0.1])
+        ctx.fillText(i, point[0], point[1])
+    }
+    for (i=minY; i<=maxY; i++) {
+        if (i==0) {
+            continue;
+        }
+        moveTo([-0.075, i])
+        lineTo([+0.075, i])
+        point = translate([0.1, i])
+        ctx.fillText(i, point[0], point[1])
+    }
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.setStrokeColor('red')
+
+    values = {}
+    for (handleidx in handles) {
+        handle = handles[handleidx]
+        values[handle] = document.getElementById(handle).value * 1.0
+        document.getElementById(handle+'val').innerText = values[handle]
+    }
+
+    document.getElementById('aoverd').innerText=(values['a']/values['d']).toFixed(2).replace("-Infinity", "undefined").replace("Infinity","undefined").replace("NaN","undefined") 
+    document.getElementById('bovere').innerText=(values['b']/values['e']).toFixed(2).replace("-Infinity", "undefined").replace("Infinity","undefined").replace("NaN","undefined")
+    document.getElementById('coverf').innerText=(values['c']/values['f']).toFixed(2).replace("-Infinity", "undefined").replace("Infinity","undefined").replace("NaN","undefined")
+
+    // solve ax + by + c = 0 for y when x = [minX, maxX]
+    // y = (-ax-c)/b
+    if (values['b']!=0) {
+        pt1 = [minX, (-values['a']*minX - values['c'])/values['b']]
+        pt2 = [maxX, (-values['a']*maxX - values['c'])/values['b']]
+    } else {
+       // vertical line, ax + c = 0, x=-c/a for all y
+       pt1 = [-values['c']/values['a'], minY]
+       pt2 = [-values['c']/values['a'], maxY]
+    }
+    moveTo(pt1)
+    lineTo(pt2)
+    ctx.stroke()
+
+    ctx.setStrokeColor('blue')
+    ctx.beginPath();
+    if (values['e'] != 0) {
+        pt1 = [minX, (-values['d']*minX - values['f'])/values['e']]
+        pt2 = [maxX, (-values['d']*maxX - values['f'])/values['e']]
+    } else {
+       pt1 = [-values['f']/values['d'], minY]
+       pt2 = [-values['f']/values['d'], maxY]
+    }
+    moveTo(pt1)
+    lineTo(pt2)
+    ctx.stroke()
+
+}
+
+draw()
+var drawflag = false;
+function queuedraw() {
+    drawflag=true;
+}
+
+window.setInterval(function() {
+    if (drawflag) draw();
+    drawflag=false;
+}, 100);
+
+for (handle in handles) {
+    document.getElementById(handles[handle]).onchange = queuedraw;
+}
+
+</script>
+</body> </html>
